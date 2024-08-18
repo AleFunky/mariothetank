@@ -1,0 +1,7 @@
+build/
+*.nes
+tools/Windows/emulator/*
+!tools/Windows/emulator/Mesen.exe
+__pycache__/
+.DS_Store
+*.mp4
