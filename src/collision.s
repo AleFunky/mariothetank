@@ -1239,16 +1239,8 @@ BHalf:
 ExSCH:
   rts                       ;leave
 CheckForSpeedrunMode:
-  jsr CheckForClimbMTiles    ;check for climbable metatiles
+  jsr TileChecks
   bcs GoToCheckSideMTiles
-  cmp #$1c                  ;otherwise check for pipe metatiles
-  beq GoToCheckSideMTiles                 ;if collided with sideways pipe (top), branch ahead
-  cmp #$1f                  ;otherwise check for pipe metatiles
-  beq GoToCheckSideMTiles                 ;if collided with sideways pipe (top), branch ahead
-  cmp #$6b
-  beq GoToCheckSideMTiles                 ;if collided with water pipe (top), branch ahead
-  cmp #$6c
-  beq GoToCheckSideMTiles                 ;if collided with water pipe (top), branch ahead
   pha
   lda GameEngineSubroutine
   cmp #$08
@@ -1427,8 +1419,28 @@ GetMTileAttrib:
   rol
   tax            ;use as offset for metatile data
   tya            ;get original metatile value back
-ExEBG:
   rts            ;leave
+
+TileChecks:
+  jsr CheckForClimbMTiles    ;check for climbable metatiles
+  bcs @found
+  cmp #$1c                  ;otherwise check for pipe metatiles
+  beq @found                 ;if collided with sideways pipe (top), branch ahead
+  cmp #$1f                  ;otherwise check for pipe metatiles
+  beq @found                 ;if collided with sideways pipe (top), branch ahead
+  cmp #$6b
+  beq @found                 ;if collided with water pipe (top), branch ahead
+  cmp #$6c
+  beq @found                 ;if collided with water pipe (top), branch ahead
+  cmp #$c2
+  beq @found                 ;coins
+  cmp #$c3
+  beq @found                 ;coins
+  clc
+  rts
+@found:
+  sec
+  rts
 
 DoSpeedrunModeStuff:
   lda R0                  ; back up R0 because of loop
@@ -1468,12 +1480,17 @@ DoSpeedrunModeStuff:
   jsr DoBlockRemove        ; spawn brick particles
   jsr DestroyBlockMetatile ; remove the tiles from nametable
 
+  lda SprDataOffset_Ctrl
+  eor #$01
+  sta SprDataOffset_Ctrl
+
   pla
   tay
   pla
   sta R0 
 
   pla                      ;restore metatile number from earlier
+ExEBG:
   rts
 
 ;-------------------------------------------------------------------------------------
