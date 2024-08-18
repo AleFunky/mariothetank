@@ -141,6 +141,8 @@ FinializeMarioInit:
 GoToNextFrameImmediately:
     lda NmiSkipped
     pha
+      lda #$00
+      sta RemovedTile
       jsr GameLoop
     pla
     cmp NmiSkipped

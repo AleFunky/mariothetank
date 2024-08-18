@@ -168,6 +168,7 @@ BlockBufferCollision:
     sta R5                      ;store here
     lda SprObject_PageLoc,x
     adc #$00                    ;add carry to page location
+    sta R8
     and #$01                    ;get LSB, mask out all other bits
     lsr                         ;move to carry
     ora R5                      ;get stored value
@@ -394,6 +395,9 @@ InjurePlayer:
       bne ExInjColRoutines     ;at zero, and branch to leave if so
 
 ForceInjury:
+          lda PlayerStatus
+          cmp #SPEEDRUN_MARIO
+          beq ExInjColRoutines
           ldx PlayerStatus          ;check player's status
           beq KillPlayer            ;branch if small
           sta PlayerStatus          ;otherwise set player's status to small
@@ -1116,6 +1120,9 @@ HeadChk:
       bcs AwardTouchedCoin        ;if so, branch to some other part of code
         ldy Player_Y_Speed          ;check player's vertical speed
         bpl DoFootCheck             ;if player not moving upwards, branch elsewhere
+        ldy PlayerStatus
+        cpy #SPEEDRUN_MARIO
+        beq :+
         ldy R4                      ;check lower nybble of vertical coordinate returned
         cpy #$04                    ;from collision detection routine
         bcc DoFootCheck             ;if low nybble < 4, branch
@@ -1125,6 +1132,7 @@ HeadChk:
           beq NYSpd                   ;if water level, branch ahead
           ldy BlockBounceTimer        ;if block bounce timer not expired,
           bne NYSpd                   ;branch ahead, do not process collision
+:
           jsr PlayerHeadCollision     ;otherwise do a sub to process collision
           jmp DoFootCheck             ;jump ahead to skip these other parts
 
@@ -1213,8 +1221,7 @@ SideCheckLoop:
   beq BHalf                 ;if collided with sideways pipe (top), branch ahead
   cmp #$6b
   beq BHalf                 ;if collided with water pipe (top), branch ahead
-    jsr CheckForClimbMTiles   ;do sub to see if player bumped into anything climbable
-    bcc CheckSideMTiles       ;if not, branch to alternate section of code
+    jsr CheckForSpeedrunMode
 BHalf:
   ldy Local_eb                   ;load block adder offset
   iny                       ;increment it
@@ -1224,12 +1231,52 @@ BHalf:
   cmp #$d0
   bcs ExSCH                 ;if too low, branch to leave
     jsr BlockBufferColli_Side ;do player-to-bg collision detection on other half of player
-    bne CheckSideMTiles       ;if something found, branch
+    beq :+       ;if something found, branch
+    jsr CheckForSpeedrunMode
+:
       dec R0                    ;otherwise decrement counter
       bne SideCheckLoop         ;run code until both sides of player are checked
 ExSCH:
   rts                       ;leave
-
+CheckForSpeedrunMode:
+  jsr CheckForClimbMTiles    ;check for climbable metatiles
+  bcs GoToCheckSideMTiles
+  cmp #$1c                  ;otherwise check for pipe metatiles
+  beq GoToCheckSideMTiles                 ;if collided with sideways pipe (top), branch ahead
+  cmp #$1f                  ;otherwise check for pipe metatiles
+  beq GoToCheckSideMTiles                 ;if collided with sideways pipe (top), branch ahead
+  cmp #$6b
+  beq GoToCheckSideMTiles                 ;if collided with water pipe (top), branch ahead
+  cmp #$6c
+  beq GoToCheckSideMTiles                 ;if collided with water pipe (top), branch ahead
+  pha
+  lda GameEngineSubroutine
+  cmp #$08
+  bne GoToCheckSideMTilesPla
+  lda PlayerStatus
+  cmp #SPEEDRUN_MARIO
+  beq :+
+  pla
+  tsx
+  inx
+  inx
+  txs ; the holy grail of undo a jrs
+  rts
+: 
+  pla
+  ldx RemovedTile
+  bne ExSCH
+  pha
+  jmp DoSpeedrunModeStuff
+GoToClimb: 
+  jmp HandleClimbing
+GoToCheckSideMTilesPla:
+  pla
+GoToCheckSideMTiles:
+  tsx
+  inx
+  inx
+  txs ; the holy grail of undo a jrs
 CheckSideMTiles:
   jsr ChkInvisibleMTiles     ;check for hidden or coin 1-up blocks
   beq ExSCH                  ;branch to leave if either found
@@ -1300,6 +1347,13 @@ ExCSM:
 ;$06-$07 - block buffer address
 
 StopPlayerMove:
+  lda GameEngineSubroutine
+  cmp #$08
+  bne :+
+  lda PlayerStatus
+  cmp #SPEEDRUN_MARIO
+  beq ExCSM
+:  
   jmp ImpedePlayerMove      ;stop player's movement
       
 AreaChangeTimerData:
@@ -1376,6 +1430,51 @@ GetMTileAttrib:
 ExEBG:
   rts            ;leave
 
+DoSpeedrunModeStuff:
+  lda R0                  ; back up R0 because of loop
+  pha
+  tya                     ; back up also y
+  pha
+
+  inc RemovedTile         ; flag no more tiles updates in this frame
+
+  ldy R2
+  lda #$00
+  sta (R6),y              ; replace the metatile with nothing
+
+  ldx SprDataOffset_Ctrl
+
+  lda R5                  ; 
+  and #$f0                ; get x pos from block buffer
+  sta Block_X_Position,x  ;
+
+  tya                     ; y is already Y pos
+  clc
+  adc #$20                ; the 20 pixels of the status bar
+  and #$f0
+  sta Block_Y_Position,x
+
+  lda R8                  ; 
+  adc #$00                ; get page loc from block buffer
+  sta Block_PageLoc,x     ;
+  sta Block_PageLoc2,x    ;
+
+  lda #$12                 
+  sta Block_State,x        ; breakable flag
+
+  lda #$01
+  sta Block_Y_HighPos,x    ; always 1 because blocks are in the levels
+
+  jsr DoBlockRemove        ; spawn brick particles
+  jsr DestroyBlockMetatile ; remove the tiles from nametable
+
+  pla
+  tay
+  pla
+  sta R0 
+
+  pla                      ;restore metatile number from earlier
+  rts
 
 ;-------------------------------------------------------------------------------------
 ;$06-$07 - address from block buffer routine
@@ -1803,11 +1902,19 @@ BlockYPosAdderData:
   .byte $04, $12
 
 PlayerHeadCollision:
+  ldy RemovedTile
+  bne NoJSFnd
   pha                      ;store metatile number to stack
     lda #$11                 ;load unbreakable block object state by default
     ldx SprDataOffset_Ctrl   ;load offset control bit here
+    
+
+    lda PlayerStatus
+    cmp #SPEEDRUN_MARIO
+    beq @speedrun
     ldy PlayerSize           ;check player's size
     bne :+            ;if small, branch
+@speedrun:
       lda #$12                 ;otherwise load breakable block object state
 :
     sta Block_State,x        ;store into block object buffer
@@ -1821,6 +1928,10 @@ PlayerHeadCollision:
     lda (R6),y              ;get contents of block buffer at old address at $06, $07
     jsr BlockBumpedChk       ;do a sub to check which block player bumped head on
     sta R0                   ;store metatile here
+    lda #$00
+    ldy PlayerStatus
+    cpy #SPEEDRUN_MARIO
+    beq PutMTileB
     ldy PlayerSize           ;check player's size
     bne :+             ;if small, use metatile itself as contents of A
       tya                      ;otherwise init A (note: big = 0)

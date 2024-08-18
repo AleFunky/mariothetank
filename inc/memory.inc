@@ -492,7 +492,7 @@ RESERVE AltEntranceControl, 1
 RESERVE CurrentPlayer, 1 ; 0 = mario, 1 = luigi
 RESERVE PlayerSize, 1 ; 1 = small, 0 = big
 RESERVE Player_Pos_ForScroll, 1
-RESERVE PlayerStatus, 1 ; 0 = small, 1 = super, 2 = firey
+RESERVE PlayerStatus, 1 ; 0 = small, 1 = super, 2 = firey, 3 = speedrun
 RESERVE FetchNewGameTimerFlag, 1
 RESERVE JoypadOverride, 1
 RESERVE GameTimerExpiredFlag, 1
@@ -564,6 +564,8 @@ RESERVE StarInvincibleTimer, 1
 RESERVE ScreenTimer, 1
 RESERVE WorldEndTimer, 1
 RESERVE DemoTimer, 1
+RESERVE RemovedTile, 1
+RESERVE R8, 1
 
 ALL_TIMER_COUNT = DemoTimer - Timers
 

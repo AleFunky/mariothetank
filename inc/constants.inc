@@ -222,6 +222,13 @@ FIREFLOWER_BOX_METATILE = $c1
   MODE_GAMEOVER
 .endenum
 
+.enum
+  SMALL_MARIO
+  BIG_MARIO
+  FIRE_MARIO
+  SPEEDRUN_MARIO
+.endenum
+
 
 WarmBootOffset        = <DisplayDigits
 ColdBootOffset        = <WarmBootValidation

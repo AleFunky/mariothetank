@@ -17,7 +17,7 @@
 .export ProcFireball_Bubble
   lda PlayerStatus           ;check player's status
   cmp #$02
-  bcc ProcAirBubbles         ;if not fiery, branch
+  bne ProcAirBubbles         ;if not fiery, branch
   lda A_B_Buttons
   and #B_Button              ;check for b button pressed
   beq ProcFireballs          ;branch if not pressed
@@ -81,7 +81,7 @@ ProcAirBubbles:
 NotSwimming:
   lda PlayerStatus           ;check player's status
   cmp #$02
-  bcs Exit
+  beq Exit
     ; Not fiery state anymore, so kill fireball
     lda #0
     sta FireballMetasprite

@@ -43,7 +43,10 @@ PrimaryGameSetup:
 
   lda #$01
   sta FetchNewGameTimerFlag   ;set flag to load game timer from header
+  lda #$00
   sta PlayerSize              ;set player's size to small
+  lda #SPEEDRUN_MARIO
+  sta PlayerStatus           ;init player status (note A will always be zero here)
   lda #$02
   sta NumberofLives           ;give each player three lives
   sta OffScr_NumberofLives
