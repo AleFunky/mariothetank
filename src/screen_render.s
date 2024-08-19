@@ -1407,7 +1407,7 @@ CRACKED_BRICK_METATILE = $80 + (* - Palette1_MTiles_Old) / 4
   .byte $24, $47, $24, $47 ;half brick (???)
   .byte $86, $8a, $87, $8b ;water pipe top
   .byte $8e, $91, $8f, $92 ;water pipe bottom
-  .byte $24, $2f, $24, $3d ;flag ball (residual object)
+  .byte $ab, $ac, $ad, $ae ;solid block (3-d block)
 
 Palette2_MTiles_Old:
   .byte $24, $24, $24, $35 ;cloud left
@@ -1518,7 +1518,7 @@ Palette1_MTiles:
 .byte $24, $48, $24, $48 ;half brick (???)
 .byte $54, $64, $55, $65 ;water pipe top
 .byte $74, $84, $75, $85 ;water pipe bottom
-.byte $24, $5F, $24, $6F ;flag ball (residual object)
+.byte $80, $90, $81, $91 ;solid block (3-d block)
 
 Palette2_MTiles:
 .byte $24, $24, $24, $30 ;cloud left

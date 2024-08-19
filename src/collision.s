@@ -1134,6 +1134,8 @@ HeadChk:
         bpl DoFootCheck             ;if player not moving upwards, branch elsewhere
         jsr CheckForClimbMTiles
         bcs SolidOrClimb
+        jsr ForceSolidBlocks
+        bcs SolidOrClimb
         ldy PlayerStatus
         cpy #SPEEDRUN_MARIO
         beq :+
@@ -1268,6 +1270,8 @@ CheckSideMTiles:
     bcc ContSChk               ;if not found, skip and continue with code
       jmp HandleClimbing         ;otherwise jump to handle climbing
 ContSChk:
+  jsr ForceSolidBlocks
+  bcs ForceStopPlayerMove
   jsr CheckForCoinMTiles     ;check to see if player touched coin
   bcs HandleCoinMetatile     ;if so, execute code to erase coin and award to player 1 coin
     jsr ChkJumpspringMetatiles ;check for jumpspring metatiles
@@ -1333,11 +1337,11 @@ ExCSM:
 StopPlayerMove:
   lda GameEngineSubroutine
   cmp #$08
-  bne :+
+  bne ForceStopPlayerMove
   lda PlayerStatus
   cmp #SPEEDRUN_MARIO
   beq ExCSM
-:  
+ForceStopPlayerMove:
   jmp ImpedePlayerMove      ;stop player's movement
       
 AreaChangeTimerData:
@@ -1376,7 +1380,7 @@ ErACM:
 ;--------------------------------
 
 SolidMTileUpperExt:
-  .byte $10, $61, CLOUD_METATILE, $c4
+  .byte $10, $6d, CLOUD_METATILE, $c4
 
 CheckForSolidMTiles:
   jsr GetMTileAttrib        ;find appropriate offset based on metatile's 2 MSB
@@ -1384,7 +1388,7 @@ CheckForSolidMTiles:
   rts
 
 ClimbMTileUpperExt:
-  .byte $24, $6d, BRIDGE_METATILE + 1, $c6
+  .byte $24, $6e, BRIDGE_METATILE + 1, $c6
 
 CheckForClimbMTiles:
   jsr GetMTileAttrib        ;find appropriate offset based on metatile's 2 MSB
@@ -1446,23 +1450,32 @@ GoToCheckSideMTilesPlaJmp:
   jmp GoToCheckSideMTilesPla
 
 TileChecks:
-  jsr CheckForClimbMTiles    ;check for climbable metatiles
-  bcs @found
+  jsr CheckForClimbMTiles   ;check for climbable metatiles
+  bcs FoundTile
   cmp #$1c                  ;otherwise check for pipe metatiles
-  beq @found                 ;if collided with sideways pipe (top), branch ahead
+  beq FoundTile             ;if collided with sideways pipe (top), branch ahead
   cmp #$1f                  ;otherwise check for pipe metatiles
-  beq @found                 ;if collided with sideways pipe (top), branch ahead
+  beq FoundTile             ;if collided with sideways pipe (top), branch ahead
   cmp #$6b
-  beq @found                 ;if collided with water pipe (top), branch ahead
+  beq FoundTile             ;if collided with water pipe (top), branch ahead
   cmp #$6c
-  beq @found                 ;if collided with water pipe (top), branch ahead
+  beq FoundTile             ;if collided with water pipe (top), branch ahead
   cmp #$c2
-  beq @found                 ;coins
+  beq FoundTile             ;coins
   cmp #$c3
-  beq @found                 ;coins
+  beq FoundTile             ;coins
+ForceSolidBlocks:
+  cmp #$6d
+  beq FoundTile             ;flagpole base
+  cmp #$67
+  beq FoundTile             ;jumpspring
+  cmp #$68
+  beq FoundTile             ;jumpspring
+  cmp #$c5
+  beq FoundTile             ;axe
   clc
   rts
-@found:
+FoundTile:
   sec
   rts
 

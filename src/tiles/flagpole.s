@@ -21,7 +21,7 @@ FlagpoleObject:
   ldy #$08
   lda #$25
   jsr RenderUnderPart
-  lda #$61                 ;render solid block at the bottom
+  lda #$6d                 ;render solid block at the bottom
   sta MetatileBuffer+10
   jsr GetAreaObjXPosition
   sec                      ;get pixel coordinate of where the flagpole is,
