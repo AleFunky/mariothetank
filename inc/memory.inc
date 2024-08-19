@@ -195,6 +195,13 @@ RESERVE SwitchToMainIRQ, 1
 RESERVE IrqPointerJmp, 3
 IrqPointer := IrqPointerJmp + 1
 
+RESERVE CurrentBank, 1
+RESERVE ReloadCHRBank, 1
+RESERVE CurrentCHRBank, 12
+AreaChrBank := CurrentCHRBank + 8
+PlayerChrBank := CurrentCHRBank + 0
+EnemyChrBank := CurrentCHRBank + 2
+
 
 
 ; RESERVE CurrentBank, 1
@@ -226,7 +233,7 @@ RESERVE BlockBufferColumnPos, 1
 RESERVE MetatileBuffer, 13
 
 RESERVE VRAM_Buffer1_Offset, 1
-RESERVE VRAM_Buffer1, 84
+RESERVE VRAM_Buffer1, 104
 RESERVE VRAM_Buffer2_Offset, 1
 RESERVE VRAM_Buffer2, 34
 VRAM_Buffer1_PtrOffset = 0
@@ -566,6 +573,7 @@ RESERVE WorldEndTimer, 1
 RESERVE DemoTimer, 1
 RESERVE RemovedTile, 1
 RESERVE R8, 1
+RESERVE UpdateScore,1
 
 ALL_TIMER_COUNT = DemoTimer - Timers
 

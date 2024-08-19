@@ -151,7 +151,17 @@ UpdateLoop:
       tay
       lda Block_Metatile,x      ;get metatile to be written
       sta (R6),y                ;write it to the block buffer
+      ldy PlayerStatus
+      cpy #SPEEDRUN_MARIO
+      bne :+
+        lda AreaType
+        bne :++
+        jsr RemoveCoin_Axe
+        ldx ObjectOffset
+        jmp :++
+:
       jsr WriteBlockMetatile  ;do sub to replace metatile where block object is
+:
       lda #$00
       sta Block_RepFlag,x       ;clear block object flag
 NextBUpd:

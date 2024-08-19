@@ -310,9 +310,12 @@ CheckForPUpCollision:
        cpy #PowerUpObject            ;check for power-up object
        bne EColl                     ;if not found, branch to next part
        jmp HandlePowerUpCollision    ;otherwise, unconditional jump backwards
-EColl: lda StarInvincibleTimer       ;if star mario invincibility timer expired,
+EColl: lda PlayerStatus
+       cmp #SPEEDRUN_MARIO
+       beq :+
+       lda StarInvincibleTimer       ;if star mario invincibility timer expired,
        beq HandlePECollisions        ;perform task here, otherwise kill enemy like
-       jmp ShellOrBlockDefeat        ;hit with a shell, or from beneath
+:      jmp ShellOrBlockDefeat        ;hit with a shell, or from beneath
 
 KickedShellPtsData:
       .byte $0a, $06, $04
@@ -949,17 +952,19 @@ ChkOtherEnemies:
       bcs ExHCF                 ;branch to leave if identifier => $15
 
 ShellOrBlockDefeat:
-      lda Enemy_ID,x            ;check for piranha plant
-      cmp #PiranhaPlant
-      bne StnE                  ;branch if not found
-      lda Enemy_Y_Position,x
-      adc #$18                  ;add 24 pixels to enemy object's vertical position
-      sta Enemy_Y_Position,x
-StnE: jsr ChkToStunEnemies      ;do yet another sub
+      lda Enemy_ID,x
+      pha
+      jsr ChkToStunEnemies      ;do yet another sub
       lda Enemy_State,x
       and #%00011111            ;mask out 2 MSB of enemy object's state
       ora #%00100000            ;set d5 to defeat enemy and save as new state
       sta Enemy_State,x
+      lda PlayerStatus
+      cmp #SPEEDRUN_MARIO
+      bne :+
+        lda #$06                  ;award 1000 points
+        bne EnemySmackScore
+:     
       lda #$02                  ;award 200 points by default
       ldy Enemy_ID,x            ;check for hammer bro
       cpy #HammerBro
@@ -975,6 +980,13 @@ EnemySmackScore:
        jsr SetupFloateyNumber   ;update necessary score variables
        lda #Sfx_EnemySmack      ;play smack enemy sound
        sta Square1SoundQueue
+       pla
+       cmp #PiranhaPlant
+       bne ExHCF                  ;branch if not found
+       lda #$02
+       sta Enemy_Y_HighPos,x
+       lda #$00
+       sta Enemy_Flag,x
 ExHCF: rts                      ;and now let's leave
 
 ;-------------------------------------------------------------------------------------
@@ -1003,7 +1015,7 @@ Shroom_Flower_PUp:
       cmp #$01            ;if player status not super, leave
       bne NearbyRTS
       ldx ObjectOffset    ;get enemy offset, not necessary
-      lda #$02            ;set player status to fiery
+      lda #SPEEDRUN_MARIO ;set player status to speedrun mario
       sta PlayerStatus
       jsr GetPlayerColors ;run sub to change colors of player
       ldx ObjectOffset    ;get enemy offset again, and again not necessary
@@ -1120,6 +1132,8 @@ HeadChk:
       bcs AwardTouchedCoin        ;if so, branch to some other part of code
         ldy Player_Y_Speed          ;check player's vertical speed
         bpl DoFootCheck             ;if player not moving upwards, branch elsewhere
+        jsr CheckForClimbMTiles
+        bcs SolidOrClimb
         ldy PlayerStatus
         cpy #SPEEDRUN_MARIO
         beq :+
@@ -1221,6 +1235,8 @@ SideCheckLoop:
   beq BHalf                 ;if collided with sideways pipe (top), branch ahead
   cmp #$6b
   beq BHalf                 ;if collided with water pipe (top), branch ahead
+  jsr CheckForClimbMTiles    ;check for climbable metatiles
+  bcs BHalf
     jsr CheckForSpeedrunMode
 BHalf:
   ldy Local_eb                   ;load block adder offset
@@ -1238,30 +1254,6 @@ BHalf:
       bne SideCheckLoop         ;run code until both sides of player are checked
 ExSCH:
   rts                       ;leave
-CheckForSpeedrunMode:
-  jsr TileChecks
-  bcs GoToCheckSideMTiles
-  pha
-  lda GameEngineSubroutine
-  cmp #$08
-  bne GoToCheckSideMTilesPla
-  lda PlayerStatus
-  cmp #SPEEDRUN_MARIO
-  beq :+
-  pla
-  tsx
-  inx
-  inx
-  txs ; the holy grail of undo a jrs
-  rts
-: 
-  pla
-  ldx RemovedTile
-  bne ExSCH
-  pha
-  jmp DoSpeedrunModeStuff
-GoToClimb: 
-  jmp HandleClimbing
 GoToCheckSideMTilesPla:
   pla
 GoToCheckSideMTiles:
@@ -1419,7 +1411,39 @@ GetMTileAttrib:
   rol
   tax            ;use as offset for metatile data
   tya            ;get original metatile value back
+ExSCH2:
   rts            ;leave
+
+CheckForSpeedrunMode:
+  jsr TileChecks
+  bcs GoToCheckSideMTilesJmp
+  pha
+  lda GameEngineSubroutine
+  cmp #$08
+  bne GoToCheckSideMTilesPlaJmp
+  lda PlayerStatus
+  cmp #SPEEDRUN_MARIO
+  beq :+
+  pla
+  tsx
+  inx
+  inx
+  txs ; the holy grail of undo a jrs
+  jmp CheckSideMTiles
+: 
+  pla
+  ldx RemovedTile
+  bne ExSCH2
+  pha
+  jmp DoSpeedrunModeStuff
+GoToClimb: 
+  jmp HandleClimbing
+
+GoToCheckSideMTilesJmp:
+  jmp GoToCheckSideMTiles
+
+GoToCheckSideMTilesPlaJmp:
+  jmp GoToCheckSideMTilesPla
 
 TileChecks:
   jsr CheckForClimbMTiles    ;check for climbable metatiles
@@ -1477,11 +1501,12 @@ DoSpeedrunModeStuff:
   lda #$01
   sta Block_Y_HighPos,x    ; always 1 because blocks are in the levels
 
-  jsr DoBlockRemove        ; spawn brick particles
-  jsr DestroyBlockMetatile ; remove the tiles from nametable
+  jsr RemoveCoin_Axe       ; remove the tiles from nametable
 
-  lda SprDataOffset_Ctrl
-  eor #$01
+  ldx SprDataOffset_Ctrl   ; the sub above replaced X
+
+  jsr DoBlockRemove        ; spawn brick particles
+  eor #$01                 ; the sub above returns SprDataOffset_Ctrl on A
   sta SprDataOffset_Ctrl
 
   pla
@@ -1492,6 +1517,8 @@ DoSpeedrunModeStuff:
   pla                      ;restore metatile number from earlier
 ExEBG:
   rts
+CoinTable:
+      .byte $04, $00, $00, $00
 
 ;-------------------------------------------------------------------------------------
 ;$06-$07 - address from block buffer routine
@@ -1915,19 +1942,19 @@ NoJSFnd: rts           ;leave
 ;$06-$07 - used as block buffer address indirect
 
 BlockYPosAdderData:
-;     Big, Small
+;     Big, Small, SR mario swimming
   .byte $04, $12
 
 PlayerHeadCollision:
   ldy RemovedTile
   bne NoJSFnd
+  inc RemovedTile
   pha                      ;store metatile number to stack
     lda #$11                 ;load unbreakable block object state by default
     ldx SprDataOffset_Ctrl   ;load offset control bit here
     
-
-    lda PlayerStatus
-    cmp #SPEEDRUN_MARIO
+    ldy PlayerStatus
+    cpy #SPEEDRUN_MARIO
     beq @speedrun
     ldy PlayerSize           ;check player's size
     bne :+            ;if small, branch
@@ -1935,7 +1962,14 @@ PlayerHeadCollision:
       lda #$12                 ;otherwise load breakable block object state
 :
     sta Block_State,x        ;store into block object buffer
-    jsr DestroyBlockMetatile ;store blank metatile in vram buffer to write to name table
+    lda AreaType
+    bne :+
+    lda PlayerStatus
+    cmp #SPEEDRUN_MARIO
+    beq :++                      ; skip if speedrun mario
+:
+      jsr DestroyBlockMetatile ;store blank metatile in vram buffer to write to name table
+:
     ldx SprDataOffset_Ctrl   ;load offset control bit
     lda R2                   ;get vertical high nybble offset used in block buffer routine
     sta Block_Orig_YPos,x    ;set as vertical coordinate for block object
@@ -1944,11 +1978,14 @@ PlayerHeadCollision:
     sta Block_BBuf_Low,x     ;save as offset here to be used later
     lda (R6),y              ;get contents of block buffer at old address at $06, $07
     jsr BlockBumpedChk       ;do a sub to check which block player bumped head on
+    php
     sta R0                   ;store metatile here
     lda #$00
     ldy PlayerStatus
     cpy #SPEEDRUN_MARIO
-    beq PutMTileB
+    beq PutMTileBplp
+    plp
+    lda R0
     ldy PlayerSize           ;check player's size
     bne :+             ;if small, use metatile itself as contents of A
       tya                      ;otherwise init A (note: big = 0)
@@ -1974,11 +2011,22 @@ StartBTmr:
         ldy #$c4                 ;otherwise use empty block metatile
 :  
       tya                      ;put metatile into A
+      jmp PutMTileB
+PutMTileBplp:
+    plp
 PutMTileB:
     sta Block_Metatile,x     ;store whatever metatile be appropriate here
     jsr InitBlock_XY_Pos     ;get block object horizontal coordinates saved
     ldy R2                   ;get vertical high nybble offset
+    lda PlayerStatus
+    cmp #SPEEDRUN_MARIO
+    bne @put23
+@putzero:
+    lda #$00
+    beq @returnfromzero
+@put23:
     lda #$23
+@returnfromzero:
     sta (R6),y               ;write blank metatile $23 to block buffer
     lda #$10
     sta BlockBounceTimer     ;set block bounce timer
@@ -1997,11 +2045,20 @@ BigBP:
   adc BlockYPosAdderData,y ;add value determined by size
   and #$f0                 ;mask out low nybble to get 16-pixel correspondence
   sta Block_Y_Position,x   ;save as vertical coordinate for block object
+  lda PlayerStatus
+  eor CrouchingFlag         ; no crouching flag
+  cmp #SPEEDRUN_MARIO
+  bne :+
+    lda Player_Y_Position    ;get player's vertical coordinate
+    sbc #$04
+    and #$f0
+    sta Block_Y_Position,x   ;save as vertical coordinate for block object
+:
   ldy Block_State,x        ;get block object state
   cpy #$11
   beq :+                   ;if set to value loaded for unbreakable, branch
     jsr BrickShatter         ;execute code for breakable brick
-    jmp InvOBit              ;skip subroutine to do last part of code here
+    jmp InvOBit              ;skip subroutine to do last part of   code here
 :   
   jsr BumpBlock            ;execute code for unbreakable brick or question block
 InvOBit:

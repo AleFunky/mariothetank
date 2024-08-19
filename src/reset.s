@@ -141,8 +141,7 @@ FinializeMarioInit:
 GoToNextFrameImmediately:
     lda NmiSkipped
     pha
-      lda #$00
-      sta RemovedTile
+      
       jsr GameLoop
     pla
     cmp NmiSkipped
@@ -162,7 +161,12 @@ GoToNextFrameImmediately:
   ; lda Mirror_PPUMASK
   ; and #%11011111
   ; sta PPUMASK
-  lda #0
+  lda UpdateScore
+  beq :+
+  jsr GetSBNybbles  
+: lda #0
+  sta RemovedTile
+  sta UpdateScore
   sta NmiDisable
   rts
 .endproc

@@ -12,13 +12,6 @@ RESERVEZP safecall_a, 1
 RESERVEZP safecall_x, 1
 RESERVEZP safecall_y, 1
 RESERVEZP safecall_ptr, 2
-.segment "SHORTRAM"
-RESERVE CurrentBank, 1
-RESERVE ReloadCHRBank, 1
-RESERVE CurrentCHRBank, 12
-AreaChrBank := CurrentCHRBank + 8
-PlayerChrBank := CurrentCHRBank + 0
-EnemyChrBank := CurrentCHRBank + 2
 .popseg
 
 

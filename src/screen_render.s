@@ -11,6 +11,7 @@
 .export InitializeNameTables, UpdateTopScore, RenderAttributeTables
 .export WriteGameText, HandlePipeEntry, MoveVOffset, UpdateNumber
 .export RemBridge, GiveOneCoin, DrawMushroomIcon, WriteBlockMetatile
+.export StatusBarNybbles, GetSBNybbles
 
 .segment "RENDER"
 
@@ -860,9 +861,12 @@ CoinPoints:
   sta DigitModifier+4    ;200 points to the player
 
 AddToScore:
+  inc UpdateScore
   ldx CurrentPlayer      ;get current player
   ldy ScoreOffsets,x     ;get offset for player's score
   jsr DigitsMathRoutine  ;update the score internally with value in digit modifier
+  ldx ObjectOffset          ;get enemy object buffer offset
+  rts
 
 GetSBNybbles:
   ldy CurrentPlayer      ;get current player
@@ -908,6 +912,9 @@ StatusBarOffset:
 
 .export PrintStatusBarNumbers
 .proc PrintStatusBarNumbers
+  ldx VRAM_Buffer1_Offset
+  cpx #$30
+  bcs ExitOutputN
   sta R0             ;store player-specific offset
   jsr OutputNumbers  ;use first nybble to print the coin display
   lda R0             ;move high nybble to low
