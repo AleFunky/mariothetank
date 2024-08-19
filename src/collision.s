@@ -1020,7 +1020,7 @@ Shroom_Flower_PUp:
       jsr GetPlayerColors ;run sub to change colors of player
       ldx ObjectOffset    ;get enemy offset again, and again not necessary
       lda #$0c            ;set value to be used by subroutine tree (fiery)
-      jmp UpToFiery       ;jump to set values accordingly
+      rts
 
 SetFor1Up:
       lda #$0b                 ;change 1000 points into 1-up instead
@@ -1031,8 +1031,6 @@ UpToSuper:
        lda #$01         ;set player status to super
        sta PlayerStatus
        lda #$09         ;set value to be used by subroutine tree (super)
-
-UpToFiery:
        ldy #$00         ;set value to be used as new player state
        jmp SetPRout     ;set values to stop certain things in motion
 
@@ -1199,9 +1197,13 @@ ContChk:
       ldy R4                     ;check lower nybble of vertical coordinate returned
       cpy #$05                   ;from collision detection routine
       bcc LandPlyr               ;if lower nybble < 5, branch
-        lda Player_MovingDir
-        sta R0                     ;use player's moving direction as temp variable
-        jmp StopPlayerMove         ;jump to impede player's movement in that direction
+        
+        ldy Player_MovingDir
+        sty R0                     ;use player's moving direction as temp variable
+        jsr ForceSolidBlocks
+        bcc :+
+        jmp ForceStopPlayerMove
+:       jmp StopPlayerMove         ;jump to impede player's movement in that direction
 LandPlyr:
   jsr ChkForLandJumpSpring   ;do sub to check for jumpspring metatiles and deal with it
   lda #$f0
@@ -1455,7 +1457,6 @@ CheckForSpeedrunMode:
   pla
   ldx RemovedTile
   bne ExSCH2
-  pha
   jmp DoSpeedrunModeStuff
 GoToClimb: 
   jmp HandleClimbing
@@ -1497,6 +1498,8 @@ FoundTile:
   rts
 
 DoSpeedrunModeStuff:
+  pha
+
   lda R0                  ; back up R0 because of loop
   pha
   tya                     ; back up also y
