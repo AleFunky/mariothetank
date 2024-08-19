@@ -6,7 +6,7 @@
 __COMMON_INC = 1
 
 ;DEBUG FLAGS
-WORLD_HAX = 1
+;WORLD_HAX = 0
 
 .macpack longbranch
 .macpack generic

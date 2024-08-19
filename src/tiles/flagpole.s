@@ -39,4 +39,6 @@ FlagpoleObject:
   lda #FlagpoleFlagObject
   sta Enemy_ID+5           ;set flag identifier, note that identifier and coordinates
   inc Enemy_Flag+5         ;use last space in enemy object buffer
+  lda #OAM_PALLETE_1
+  sta Enemy_SprAttrib+5
   rts

@@ -1270,6 +1270,18 @@ CheckSideMTiles:
     bcc ContSChk               ;if not found, skip and continue with code
       jmp HandleClimbing         ;otherwise jump to handle climbing
 ContSChk:
+  cmp #$1c                  ;otherwise check for pipe metatiles
+  beq ChkPBtm             ;if collided with sideways pipe (top), branch ahead
+  cmp #$1f                  ;otherwise check for pipe metatiles
+  beq ChkPBtm             ;if collided with sideways pipe (top), branch ahead
+  cmp #$6b
+  beq ChkPBtm             ;if collided with water pipe (top), branch ahead
+  cmp #$6c
+  beq ChkPBtm             ;if collided with water pipe (top), branch ahead
+  cmp #$67
+  beq ChkJumpspring             ;jumpspring
+  cmp #$68
+  beq ChkJumpspring             ;jumpspring
   jsr ForceSolidBlocks
   bcs ForceStopPlayerMove
   jsr CheckForCoinMTiles     ;check to see if player touched coin
@@ -1282,10 +1294,10 @@ ContSChk:
 ChkPBtm:
   ldy Player_State           ;get player's state
   cpy #$00                   ;check for player's state set to normal
-  bne StopPlayerMove         ;if not, branch to impede player's movement
+  bne ForceStopPlayerMove         ;if not, branch to impede player's movement
     ldy PlayerFacingDir        ;get player's facing direction
     dey
-    bne StopPlayerMove         ;if facing left, branch to impede movement
+    bne ForceStopPlayerMove         ;if facing left, branch to impede movement
     cmp #$6c                   ;otherwise check for pipe metatiles
     beq PipeDwnS               ;if collided with sideways pipe (bottom), branch
     cmp #$1f                   ;if collided with water pipe (bottom), continue
@@ -1333,6 +1345,11 @@ ExCSM:
 ;$02 - high nybble of vertical coordinate from block buffer
 ;$04 - low nybble of horizontal coordinate from block buffer
 ;$06-$07 - block buffer address
+
+ChkJumpspring:
+    lda JumpspringAnimCtrl     ;otherwise check jumpspring animation control
+    bne ExCSM                  ;branch to leave if set
+    jmp ForceStopPlayerMove
 
 StopPlayerMove:
   lda GameEngineSubroutine
@@ -1452,14 +1469,6 @@ GoToCheckSideMTilesPlaJmp:
 TileChecks:
   jsr CheckForClimbMTiles   ;check for climbable metatiles
   bcs FoundTile
-  cmp #$1c                  ;otherwise check for pipe metatiles
-  beq FoundTile             ;if collided with sideways pipe (top), branch ahead
-  cmp #$1f                  ;otherwise check for pipe metatiles
-  beq FoundTile             ;if collided with sideways pipe (top), branch ahead
-  cmp #$6b
-  beq FoundTile             ;if collided with water pipe (top), branch ahead
-  cmp #$6c
-  beq FoundTile             ;if collided with water pipe (top), branch ahead
   cmp #$c2
   beq FoundTile             ;coins
   cmp #$c3
@@ -1473,6 +1482,14 @@ ForceSolidBlocks:
   beq FoundTile             ;jumpspring
   cmp #$c5
   beq FoundTile             ;axe
+  cmp #$1c                  ;otherwise check for pipe metatiles
+  beq FoundTile             ;if collided with sideways pipe (top), branch ahead
+  cmp #$1f                  ;otherwise check for pipe metatiles
+  beq FoundTile             ;if collided with sideways pipe (top), branch ahead
+  cmp #$6b
+  beq FoundTile             ;if collided with water pipe (top), branch ahead
+  cmp #$6c
+  beq FoundTile             ;if collided with water pipe (top), branch ahead
   clc
   rts
 FoundTile:
