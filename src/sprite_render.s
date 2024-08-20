@@ -210,6 +210,8 @@ ProcessTiles:
     rts                         ;leave
 
 DrawFloateyNumber_Coin:
+  lda #0
+  sta Misc_SprAttrib,x
   lda FrameCounter          ;get frame counter
   lsr                       ;divide by 2
   bcs @NotRsNum             ;branch if d0 not set to raise number every other frame
@@ -704,17 +706,13 @@ Exit:
 ;$00 - used to hold palette bits for attribute byte or relative X position
 
 .proc DrawBrickChunks
-  lda #$02                    ;set palette bits here
-  sta R0 
+  ;lda #$02                    ;set palette bits here
+  ;sta R0 
 ;  lda #$75                   ;set tile number for ball (something residual, likely)
-  ldy GameEngineSubroutine
-  cpy #$05                    ;if end-of-level routine running,
-  beq :+                      ;use palette and tile number assigned
-    lda #$03                   ;otherwise set different palette bits
-    sta R0 
-    ;  lda #$84                   ;and set tile number for brick chunks
-    lda #BRICK_CHUNK_TILE
-:
+  lda #$03                   ;otherwise set different palette bits
+  sta R0 
+  ;  lda #$84                   ;and set tile number for brick chunks
+  lda #BRICK_CHUNK_TILE
   ; lazy way to keep the sprite tile here.
   pha
 AllocSpr 4

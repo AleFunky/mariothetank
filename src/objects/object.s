@@ -570,6 +570,8 @@ NormalXSpdData:
       .byte $f8, $f4
 
 InitNormalEnemy:
+         lda #$00
+         sta Enemy_State,x
          ldy #$01              ;load offset of 1 by default
          lda PrimaryHardMode   ;check for primary hard mode flag set
          bne GetESpd

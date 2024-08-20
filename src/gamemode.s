@@ -96,6 +96,8 @@ InitializeGame:
 .import InitializeMemory, LoadAreaPointer
   ldy #<WorldSelectNumber  ;clear all memory as in initialization procedure,
   jsr InitializeMemory     ;but this time, clear only as far as $076f
+  jsr InitializeSram
+
   ldy #AreaMusicBuffer_Alt - SoundMemory
 ClrSndLoop:
   sta SoundMemory,y     ;clear out memory used

@@ -97,6 +97,7 @@ WBootCheck:
   ldy #WarmBootOffset          ;if passed both, load warm boot pointer
 ColdBoot:
   jsr InitializeMemory         ;clear memory using pointer in Y
+  jsr InitializeSram
   sta SND_DELTA_REG+1          ;reset delta counter load register
   sta OperMode                 ;reset primary mode of operation
   ; for debugging, clear the sprite tile numbers so its easier to see in sprite viewers
@@ -525,7 +526,7 @@ WorldSelectMessage2:
 ;$07 - RAM address high
 InitializeMemoryRAMLo = $06
 InitializeMemoryRAMHi = $07
-.export InitializeMemory, InitializeMemoryRAMLo, InitializeMemoryRAMHi
+.export InitializeMemory, InitializeMemoryRAMLo, InitializeMemoryRAMHi, InitializeSram
 .proc InitializeMemory
   ldx #$07          ;set initial high byte to $0700-$07ff
   lda #$00          ;set initial low byte to start of page (at $00 of page)
@@ -547,6 +548,25 @@ SkipByte:
       bne InitByteLoop
     dex               ;go onto the next page
     bpl InitPageLoop  ;do this until all pages of memory have been erased
+  rts
+.endproc
+  
+.proc InitializeSram
+  ldx #$7f          ;set initial high byte to $7f00-$7fff
+  lda #$00          ;set initial low byte to start of page (at $00 of page)
+  sta InitializeMemoryRAMLo
+InitPageLoop:
+    stx InitializeMemoryRAMHi
+InitByteLoop:
+InitByte:
+      sta (InitializeMemoryRAMLo),y       ;otherwise, initialize byte with current low byte in Y
+SkipByte:
+      dey
+      cpy #$ff          ;do this until all bytes in page have been erased
+      bne InitByteLoop
+    dex               ;go onto the next page
+    cpx #$60
+    bcs InitPageLoop  ;do this until all pages of memory have been erased
   rts
 .endproc
 
