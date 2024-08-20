@@ -730,40 +730,44 @@ AllocSpr 4
   jsr DumpFourSpr            ;do sub to dump attribute data into all four sprites
   dey
   dey                        ;decrement offset to Y coordinate
-  lda Block_Rel_YPos         ;get first block object's relative vertical coordinate
+  lda Brick_Rel_YPos         ;get first block object's relative vertical coordinate
   jsr DumpTwoSpr             ;do sub to dump current Y coordinate into two sprites
-  lda Block_Rel_XPos         ;get first block object's relative horizontal coordinate
+  lda Brick_Rel_XPos         ;get first block object's relative horizontal coordinate
   sta Sprite_X_Position,y    ;save into X coordinate of first sprite
-  lda Block_Orig_XPos,x      ;get original horizontal coordinate
+  lda Brick_Orig_XPos,x      ;get original horizontal coordinate
   sec
   sbc ScreenLeft_X_Pos       ;subtract coordinate of left side from original coordinate
   sta R0                     ;store result as relative horizontal coordinate of original
   sec
-  sbc Block_Rel_XPos         ;get difference of relative positions of original - current
+  sbc Brick_Rel_XPos         ;get difference of relative positions of original - current
   adc R0                     ;add original relative position to result
   adc #$06                   ;plus 6 pixels to position second brick chunk correctly
   sta Sprite_X_Position+4,y  ;save into X coordinate of second sprite
-  lda Block_Rel_YPos+1       ;get second block object's relative vertical coordinate
+  lda Brick_Rel_YPos+1       ;get second block object's relative vertical coordinate
   sta Sprite_Y_Position+8,y
   sta Sprite_Y_Position+12,y ;dump into Y coordinates of third and fourth sprites
-  lda Block_Rel_XPos+1       ;get second block object's relative horizontal coordinate
+  lda Brick_Rel_XPos+1       ;get second block object's relative horizontal coordinate
   sta Sprite_X_Position+8,y  ;save into X coordinate of third sprite
   lda R0                     ;use original relative horizontal position
   sec
-  sbc Block_Rel_XPos+1       ;get difference of relative positions of original - current
+  sbc Brick_Rel_XPos+1       ;get difference of relative positions of original - current
   adc R0                     ;add original relative position to result
   adc #$06                   ;plus 6 pixels to position fourth brick chunk correctly
   sta Sprite_X_Position+12,y ;save into X coordinate of fourth sprite
-  lda Block_OffscreenBits    ;get offscreen bits for block object
+  lda Brick_Rel_XPos
+  cmp #$f0
+  bcs :+
+  lda Brick_OffscreenBits    ;get offscreen bits for block object
   ; jsr ChkLeftCo              ;do sub to move left half of sprites offscreen if necessary
-  and #%00001000                ;check to see if d3 in offscreen bits are set
-  beq :+                    ;if not set, branch, otherwise move sprites offscreen
+  and #%00000010                ;check to see if d3 in offscreen bits are set
+  beq :++                    ;if not set, branch, otherwise move sprites offscreen
+:
     lda #$f8                   ;move offscreen two OAMs
     sta Sprite_Y_Position,y    ;on the left side (or two rows of enemy on either side
     sta Sprite_Y_Position+8,y  ;if branched here from enemy graphics handler)
 :
-  lda Block_OffscreenBits    ;get offscreen bits again
-  asl                        ;shift d7 into carry
+  lda Brick_OffscreenBits    ;get offscreen bits again
+  asl                       ;shift d7 into carry
   bcc :+                ;if d7 not set, branch to last part
     lda #$f8
     jsr DumpTwoSpr             ;otherwise move top sprites offscreen

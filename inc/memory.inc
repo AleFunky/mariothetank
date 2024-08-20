@@ -623,6 +623,28 @@ RESERVE DebugCooldown, 1
 
 RESERVE WarmBootValidation, 1
 
+.segment "SRAM"
+
+BRICKS_SLOTS = 8
+
+RESERVE BrickOffset, 1
+RESERVE Brick_State, BRICKS_SLOTS
+RESERVE Brick_Rel_XPos, 2
+RESERVE Brick_Rel_YPos, 2
+RESERVE Brick_Orig_XPos, BRICKS_SLOTS
+RESERVE Brick_OffscreenBits, 2
+RESERVE Brick_Y_HighPos, BRICKS_SLOTS
+RESERVE Brick_Y_Position, BRICKS_SLOTS*2
+RESERVE Brick_Y_Speed, BRICKS_SLOTS*2
+RESERVE Brick_Y_MoveForce, BRICKS_SLOTS*2
+RESERVE Brick_YMoveForceFractional, BRICKS_SLOTS*2
+RESERVE Brick_X_Position, BRICKS_SLOTS*2
+RESERVE Brick_X_Speed, BRICKS_SLOTS*2
+RESERVE Brick_X_MoveForce, BRICKS_SLOTS*2
+RESERVE Brick_PageLoc, BRICKS_SLOTS*2
+
+RESERVE OldR5, 1
+
 .popseg
 
 .endif ; __MEMORY_INC

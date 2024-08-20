@@ -142,6 +142,28 @@ GetObjRelativePosition:
   sta SprObject_Rel_XPos,y    ;store result here
   rts
 
+.export RelativeBrickPosition
+RelativeBrickPosition:
+  ldy #$00
+  jsr GetBrickRelativePosition
+  txa
+  clc
+  adc #BRICKS_SLOTS
+  tax
+  iny
+  jsr GetBrickRelativePosition
+  ldx ObjectOffset            ;reload old object offset and leave
+  rts
+
+GetBrickRelativePosition:
+  lda Brick_Y_Position,x  ;load vertical coordinate low
+  sta Brick_Rel_YPos,y    ;store here
+  lda Brick_X_Position,x  ;load horizontal coordinate
+  sec                         ;subtract left edge coordinate
+  sbc ScreenLeft_X_Pos
+  sta Brick_Rel_XPos,y    ;store result here
+  rts
+
 ;-------------------------------------------------------------------------------------
 ;$00 - used as temp variable to hold offscreen bits
 
@@ -208,12 +230,81 @@ GetOffScreenBitsSet:
   ldx ObjectOffset
   rts
 
+.export GetBrickOffscreenBits
+GetBrickOffscreenBits:                         ;save offscreen bits offset to stack for now
+  ldx ObjectOffset
+    jsr GetXBrickOffscreenBits  ;do subroutine here
+    lsr                    ;move high nybble to low
+    lsr
+    lsr
+    lsr
+    sta R0                 ;store here
+    jsr GetYBrickOffscreenBits
+    asl                         ;move low nybble to high nybble
+    asl
+    asl
+    asl
+    ora R0                      ;mask together with previously saved low nybble
+  sta Brick_OffscreenBits
+  rts
+
 ;--------------------------------
 ;(these apply to these three subsections)
 ;$04 - used to store offset to sprite object data
 ;$05 - used as adder in DividePDiff
 ;$06 - used to store constant used to compare to pixel difference in $07
 ;$07 - used to store pixel difference between X positions of object and screen edges
+
+.proc GetXBrickOffscreenBits
+  stx R4                      ;save position in buffer to here
+  ldy #$01                    ;start with right side of screen
+Loop:
+    lda ScreenEdge_X_Pos,y      ;get pixel coordinate of edge
+    sec                         ;get difference between pixel coordinate of edge
+    sbc Brick_X_Position,x  ;and pixel coordinate of object position
+    sta R7                      ;store here
+    lda ScreenEdge_PageLoc,y    ;get page location of edge
+    sbc Brick_PageLoc,x     ;subtract page location of object position from it
+    ldx DefaultXOnscreenOfs,y   ;load offset value here
+    cmp #$00
+    bmi Continue                ;if beyond right edge or in front of left edge, branch
+    ldx DefaultXOnscreenOfs+1,y ;if not, load alternate offset value here
+    cmp #$01      
+    bpl Continue                ;if one page or more to the left of either edge, branch
+      lda #$38                    ;if no branching, load value here and store
+      sta R6 
+      lda #$08                    ;load some other value and execute subroutine
+      ; jsr DividePDiff ; inlined
+      sta R5        ;store current value in A here
+      lda R7        ;get pixel difference
+      cmp R6        ;compare to preset value
+      bcs Continue   ;if pixel difference >= preset value, branch
+      lsr           ;divide by eight to get tile difference
+      lsr
+      lsr
+      and #$07      ;mask out all but 3 LSB
+      cpy #$01      ;right side of the screen or top?
+      bcs :+        ;if so, branch, use difference / 8 as offset
+      adc R5        ;if not, add value to difference / 8
+    :
+      tax           ;use as offset
+Continue:
+    lda XOffscreenBitsData,x    ;get bits here
+    ldx R4                      ;reobtain position in buffer
+    cmp #$00                    ;if bits not zero, branch to leave
+    bne ExXOfsBS
+    dey                         ;otherwise, do left side of screen now
+    bpl Loop                    ;branch if not already done with left side
+ExXOfsBS:
+  rts
+
+XOffscreenBitsData:
+  .byte $7f, $3f, $1f, $0f, $07, $03, $01, $00
+  .byte $80, $c0, $e0, $f0, $f8, $fc, $fe, $ff
+
+DefaultXOnscreenOfs:
+  .byte $07, $0f, $07
+.endproc
 
 .proc GetXOffscreenBits
   stx R4                      ;save position in buffer to here
@@ -268,6 +359,61 @@ DefaultXOnscreenOfs:
 
 ;--------------------------------
 
+.proc GetYBrickOffscreenBits
+  stx R4                       ;save position in buffer to here
+  ldy #$01                     ;start with top of screen
+Loop:
+    lda HighPosUnitData,y        ;load coordinate for edge of vertical unit
+    sec
+    sbc Brick_Y_Position,x   ;subtract from vertical coordinate of object
+    sta R7                       ;store here
+    lda #$01                     ;subtract one from vertical high byte of object
+    sbc Brick_Y_HighPos,x
+    ldx DefaultYOnscreenOfs,y    ;load offset value here
+    cmp #$00
+    bmi Continue                 ;if under top of the screen or beyond bottom, branch
+    ldx DefaultYOnscreenOfs+1,y  ;if not, load alternate offset value here
+    cmp #$01
+    bpl Continue                 ;if one vertical unit or more above the screen, branch
+      lda #$20                     ;if no branching, load value here and store
+      sta R6 
+      lda #$04                     ;load some other value and execute subroutine
+      ; jsr DividePDiff ; inlined
+      sta R5        ;store current value in A here
+      lda R7        ;get pixel difference
+      cmp R6        ;compare to preset value
+      bcs Continue   ;if pixel difference >= preset value, branch
+      lsr           ;divide by eight to get tile difference
+      lsr
+      lsr
+      and #$07      ;mask out all but 3 LSB
+      cpy #$01      ;right side of the screen or top?
+      bcs :+        ;if so, branch, use difference / 8 as offset
+      adc R5        ;if not, add value to difference / 8
+    :
+      tax           ;use as offset
+Continue:
+  lda YOffscreenBitsData,x     ;get offscreen data bits using offset
+  ldx R4                       ;reobtain position in buffer
+  cmp #$00
+  bne ExYOfsBS                 ;if bits not zero, branch to leave
+  dey                          ;otherwise, do bottom of the screen now
+  bpl Loop
+ExYOfsBS:
+  rts
+
+YOffscreenBitsData:
+  .byte $00, $08, $0c, $0e
+  .byte $0f, $07, $03, $01
+  .byte $00
+
+DefaultYOnscreenOfs:
+  .byte $04, $00, $04
+
+HighPosUnitData:
+  .byte $ff, $00
+
+.endproc
 
 .proc GetYOffscreenBits
   stx R4                       ;save position in buffer to here
@@ -375,6 +521,15 @@ ExTrans:
 
 MaxSpdBlockData:
       .byte $06, $08
+ImposeGravityBrickCall:
+.export ImposeGravityBrickCall
+      ldy #$01       ;set offset for maximum speed
+      lda #$50       ;set movement amount here
+      sta R0 
+      lda MaxSpdBlockData,y    ;get maximum speed
+      sta R2             ;set maximum speed here
+      lda #$00           ;set value to move downwards
+      jmp ImposeGravityBrick  ;jump to the code that actually moves it
 
 ImposeGravityBlock:
       ldy #$01       ;set offset for maximum speed
@@ -391,6 +546,67 @@ ImposeGravitySprObj:
 ;$00 - used for downward force
 ;$01 - used for upward force
 ;$07 - used as adder for vertical position
+
+.proc ImposeGravityBrick
+  pha                          ;push value to stack
+    lda Brick_YMoveForceFractional,x
+    clc                          ;add value in movement force to contents of dummy variable
+    adc Brick_Y_MoveForce,x
+    sta Brick_YMoveForceFractional,x
+    ldy #$00                     ;set Y to zero by default
+    lda Brick_Y_Speed,x      ;get current vertical speed
+    bpl AlterYP                  ;if currently moving downwards, do not decrement Y
+    dey                          ;otherwise decrement Y
+AlterYP:
+    sty R7                       ;store Y here
+    adc Brick_Y_Position,x   ;add vertical position to vertical speed plus carry
+    sta Brick_Y_Position,x   ;store as new vertical position
+    lda Brick_Y_HighPos,x
+    adc R7                       ;add carry plus contents of $07 to vertical high byte
+    sta Brick_Y_HighPos,x    ;store as new vertical high byte
+    lda Brick_Y_MoveForce,x
+    clc
+    adc R0                       ;add downward movement amount to contents of $0433
+    sta Brick_Y_MoveForce,x
+    lda Brick_Y_Speed,x      ;add carry to vertical speed and store
+    adc #$00
+    sta Brick_Y_Speed,x
+    cmp R2                       ;compare to maximum speed
+    bmi ChkUpM                   ;if less than preset value, skip this part
+    lda Brick_Y_MoveForce,x
+    cmp #$80                     ;if less positively than preset maximum, skip this part
+    bcc ChkUpM
+    lda R2 
+    sta Brick_Y_Speed,x      ;keep vertical speed within maximum value
+    lda #$00
+    sta Brick_Y_MoveForce,x  ;clear fractional
+ChkUpM:
+  pla                          ;get value from stack
+  beq ExVMove                  ;if set to zero, branch to leave
+  lda R2 
+  eor #%11111111               ;otherwise get two's compliment of maximum speed
+  tay
+  iny
+  sty R7                       ;store two's compliment here
+  lda Brick_Y_MoveForce,x
+  sec                          ;subtract upward movement amount from contents
+  sbc R1                       ;of movement force, note that $01 is twice as large as $00,
+  sta Brick_Y_MoveForce,x  ;thus it effectively undoes add we did earlier
+  lda Brick_Y_Speed,x
+  sbc #$00                     ;subtract borrow from vertical speed and store
+  sta Brick_Y_Speed,x
+  cmp R7                       ;compare vertical speed to two's compliment
+  bpl ExVMove                  ;if less negatively than preset maximum, skip this part
+  lda Brick_Y_MoveForce,x
+  cmp #$80                     ;check if fractional part is above certain amount,
+  bcs ExVMove                  ;and if so, branch to leave
+  lda R7 
+  sta Brick_Y_Speed,x      ;keep vertical speed within maximum value
+  lda #$ff
+  sta Brick_Y_MoveForce,x  ;clear fractional
+ExVMove:
+  rts                          ;leave!
+.endproc
 
 .proc ImposeGravity
 
@@ -525,6 +741,48 @@ UseAdder: sty R2                      ;save Y here
           clc                         ;pull old carry from stack and add
           adc R0                      ;to high nybble moved to low
 ExXMove:  rts                         ;and leave
+
+.proc MoveBrickHorizontally
+.export MoveBrickHorizontally
+          lda Brick_X_Speed,x     ;get currently saved value (horizontal
+          asl                         ;speed, secondary counter, whatever)
+          asl                         ;and move low nybble to high
+          asl
+          asl
+          sta R1                      ;store result here
+          lda Brick_X_Speed,x     ;get saved value again
+          lsr                         ;move high nybble to low
+          lsr
+          lsr
+          lsr
+          cmp #$08                    ;if < 8, branch, do not change
+          bcc SaveXSpd
+          ora #%11110000              ;otherwise alter high nybble
+SaveXSpd: sta R0                      ;save result here
+          ldy #$00                    ;load default Y value here
+          cmp #$00                    ;if result positive, leave Y alone
+          bpl UseAdder
+          dey                         ;otherwise decrement Y
+UseAdder: sty R2                      ;save Y here
+          lda Brick_X_MoveForce,x ;get whatever number's here
+          clc
+          adc R1                      ;add low nybble moved to high
+          sta Brick_X_MoveForce,x ;store result here
+          lda #$00                    ;init A
+          rol                         ;rotate carry into d0
+          pha                         ;push onto stack
+          ror                         ;rotate d0 back onto carry
+          lda Brick_X_Position,x
+          adc R0                      ;add carry plus saved value (high nybble moved to low
+          sta Brick_X_Position,x  ;plus $f0 if necessary) to object's horizontal position
+          lda Brick_PageLoc,x
+          adc R2                      ;add carry plus other saved value to the
+          sta Brick_PageLoc,x     ;object's page location and save
+          pla
+          clc                         ;pull old carry from stack and add
+          adc R0                      ;to high nybble moved to low
+ExXMove:  rts                         ;and leave
+.endproc
 
 ;--------------------------------
 

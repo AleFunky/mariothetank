@@ -151,7 +151,8 @@ MatchBump:   rts                         ;note carry is set if found match
 BrickShatter:
       jsr CheckTopOfBlock    ;check to see if there's a coin directly above this block
       lda #Sfx_BrickShatter
-      sta Block_RepFlag,x    ;set flag for block object to immediately replace metatile
+      ldy SprDataOffset_Ctrl
+      sta Block_RepFlag,y    ;set flag for block object to immediately replace metatile
       sta NoiseSoundQueue    ;load brick shatter sound
       jsr SpawnBrickChunks   ;create brick chunk objects
       lda PlayerStatus
@@ -162,7 +163,7 @@ BrickShatter:
 :     lda #$05
       sta DigitModifier+5    ;set digit modifier to give player 50 points
       jsr AddToScore         ;do sub to update the score     
-      ldx SprDataOffset_Ctrl ;load control bit and leave
+      ldx BrickOffset ;load control bit and leave
       rts
 
 DoBlockRemove:
@@ -172,7 +173,7 @@ DoBlockRemove:
       lda #$05
       sta DigitModifier+5    ;set digit modifier to give player 50 points
       jsr AddToScore         ;do sub to update the score
-      lda SprDataOffset_Ctrl
+      lda BrickOffset
       rts
 ;--------------------------------
 
@@ -198,28 +199,29 @@ TopEx: rts ; TODO check this RTS can be removed                     ;leave!
 ;--------------------------------
 
 SpawnBrickChunks:
-      lda Block_X_Position,x     ;set horizontal coordinate of block object
-      sta Block_Orig_XPos,x      ;as original horizontal coordinate here
+      ldx BrickOffset
+      lda Brick_X_Position,x     ;set horizontal coordinate of block object
+      sta Brick_Orig_XPos,x      ;as original horizontal coordinate here
       lda #$f0
-      sta Block_X_Speed,x        ;set horizontal speed for brick chunk objects
-      sta Block_X_Speed+2,x
+      sta Brick_X_Speed,x        ;set horizontal speed for brick chunk objects
+      sta Brick_X_Speed+BRICKS_SLOTS,x
       lda #$fa
-      sta Block_Y_Speed,x        ;set vertical speed for one
+      sta Brick_Y_Speed,x        ;set vertical speed for one
       lda #$fc
-      sta Block_Y_Speed+2,x      ;set lower vertical speed for the other
+      sta Brick_Y_Speed+BRICKS_SLOTS,x      ;set lower vertical speed for the other
       lda #$00
-      sta Block_Y_MoveForce,x    ;init fractional movement force for both
-      sta Block_Y_MoveForce+2,x
-      lda Block_PageLoc,x
-      sta Block_PageLoc+2,x      ;copy page location
-      lda Block_X_Position,x
-      sta Block_X_Position+2,x   ;copy horizontal coordinate
-      lda Block_Y_Position,x
+      sta Brick_Y_MoveForce,x    ;init fractional movement force for both
+      sta Brick_Y_MoveForce+BRICKS_SLOTS,x
+      sta Brick_X_MoveForce,x
+      sta Brick_X_MoveForce+BRICKS_SLOTS,x
+      lda Brick_PageLoc,x
+      sta Brick_PageLoc+BRICKS_SLOTS,x      ;copy page location
+      lda Brick_X_Position,x
+      sta Brick_X_Position+BRICKS_SLOTS,x   ;copy horizontal coordinate
+      lda Brick_Y_Position,x
       clc                        ;add 8 pixels to vertical coordinate
       adc #$08                   ;and save as vertical coordinate for one of them
-      sta Block_Y_Position+2,x
-      ; lda #$fa
-      ; sta Block_Y_Speed,x        ;set vertical speed...again??? (redundant)
+      sta Brick_Y_Position+BRICKS_SLOTS,x
       rts
 
 

@@ -65,6 +65,16 @@ ProcELoop:
     dex
     stx ObjectOffset           ;set offset for first
     jsr BlockObjectsCore       ;process first block object
+    
+    ldx #BRICKS_SLOTS-1
+:   stx ObjectOffset
+    lda Brick_State,x
+    beq :+
+      jsr ProcessBrick
+:   dex  
+    bpl :--
+
+
     jsr MiscObjectsCore        ;process misc objects (hammer, jumping coins)
     jsr ProcessCannons         ;process bullet bill cannons
     jsr ProcessWhirlpools      ;process whirlpools
@@ -170,6 +180,50 @@ NextBUpd:
   rts                       ;then leave
 
 ;-------------------------------------------------------------------------------------
+EliminateBrick:
+  lda #0
+  sta Brick_State,x
+  rts
+ProcessBrick:
+        lda Brick_State,x           ;get state of block object
+        bmi EliminateBrick
+        beq UpdSteBrick             ;if not set, branch to leave
+        and #$0f                    ;mask out high nybble
+        pha                         ;push to stack
+        jsr ImposeGravityBrickCall ;do sub to impose gravity on one block object object
+        jsr MoveBrickHorizontally  ;do another sub to move horizontally
+        txa
+        clc                         ;move onto next block object
+        adc #BRICKS_SLOTS
+        tax
+        jsr ImposeGravityBrickCall     ;do sub to impose gravity on other block object
+        jsr MoveBrickHorizontally  ;do another sub to move horizontally
+        ldx ObjectOffset            ;get block object offset used for both
+        jsr RelativeBrickPosition   ;get relative coordinates
+        jsr GetBrickOffscreenBits   ;get offscreen information
+        jsr DrawBrickChunks
+        pla
+        ldy Brick_Y_HighPos,x       ;check vertical high byte of block object
+        beq UpdSteBrick                  ;if above the screen, branch to kill it
+        pha                         ;otherwise save state back into stack
+        lda #$f0
+        cmp Brick_Y_Position+BRICKS_SLOTS,x    ;check to see if bottom block object went
+        bcs ChkTopBrick                  ;to the bottom of the screen, and branch if not
+        sta Brick_Y_Position+BRICKS_SLOTS,x    ;otherwise set offscreen coordinate
+ChkTopBrick:
+        lda Brick_Y_Position,x      ;get top block object's vertical coordinate
+        cmp #$f0                    ;see if it went to the bottom of the screen
+        pla                         ;pull block object state from stack
+        bcc UpdSteBrick                  ;if not, branch to save state
+KillBrick:
+        lda #$80
+UpdSteBrick:
+        sta Brick_State,x
+        ldx ObjectOffset
+        rts
+
+
+
 
 ; Because the metasprite is rendered after, we need to keep the block around for one
 ; extra frame in order to clear the metasprite on the same frame it would in vanilla
@@ -205,7 +259,6 @@ BlockObjectsCore:
         ldx ObjectOffset            ;get block object offset used for both
         jsr RelativeBlockPosition   ;get relative coordinates
         jsr GetBlockOffscreenBits   ;get offscreen information
-        jsr DrawBrickChunks         ;draw the brick chunks
         pla                         ;get lower nybble of saved state
         ldy Block_Y_HighPos,x       ;check vertical high byte of block object
         beq UpdSte                  ;if above the screen, branch to kill it

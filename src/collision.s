@@ -1511,36 +1511,20 @@ DoSpeedrunModeStuff:
   lda #$00
   sta (R6),y              ; replace the metatile with nothing
 
-  ldx SprDataOffset_Ctrl
-
-  lda R5                  ; 
-  and #$f0                ; get x pos from block buffer
-  sta Block_X_Position,x  ;
-
-  tya                     ; y is already Y pos
-  clc
-  adc #$20                ; the 20 pixels of the status bar
-  and #$f0
-  sta Block_Y_Position,x
-
-  lda R8                  ; 
-  adc #$00                ; get page loc from block buffer
-  sta Block_PageLoc,x     ;
-  sta Block_PageLoc2,x    ;
-
-  lda #$12                 
-  sta Block_State,x        ; breakable flag
-
-  lda #$01
-  sta Block_Y_HighPos,x    ; always 1 because blocks are in the levels
+  jsr InitBrick
 
   jsr RemoveCoin_Axe       ; remove the tiles from nametable
 
   ldx SprDataOffset_Ctrl   ; the sub above replaced X
 
   jsr DoBlockRemove        ; spawn brick particles
-  eor #$01                 ; the sub above returns SprDataOffset_Ctrl on A
-  sta SprDataOffset_Ctrl
+  clc
+  adc #$01
+  cmp #BRICKS_SLOTS
+  bcc :+
+    lda #$00
+:
+  sta BrickOffset
 
   pla
   tay
@@ -1552,6 +1536,31 @@ ExEBG:
   rts
 CoinTable:
       .byte $04, $00, $00, $00
+
+InitBrick:
+  ldx BrickOffset
+
+  lda R5                  ; 
+  and #$f0                ; get x pos from block buffer
+  sta Brick_X_Position,x  ;
+
+  lda R2                  ; y is already Y pos
+  clc
+  adc #$20                ; the 20 pixels of the status bar
+  and #$f0
+  sta Brick_Y_Position,x
+
+  lda R8                  ; 
+  adc #$00                ; get page loc from block buffer
+  sta Brick_PageLoc,x     ;
+  lda #$12                 
+  sta Brick_State,x        ; breakable flag
+
+  lda #$01
+  sta Brick_Y_HighPos,x    ; always 1 because blocks are in the levels
+  lda #$00
+  sta Block_OffscreenBits,x
+  rts
 
 ;-------------------------------------------------------------------------------------
 ;$06-$07 - address from block buffer routine
@@ -1982,6 +1991,8 @@ PlayerHeadCollision:
   ldy RemovedTile
   bne NoJSFnd
   inc RemovedTile
+  ldy R5
+  sty OldR5
   pha                      ;store metatile number to stack
     lda #$11                 ;load unbreakable block object state by default
     ldx SprDataOffset_Ctrl   ;load offset control bit here
@@ -2090,14 +2101,22 @@ BigBP:
   ldy Block_State,x        ;get block object state
   cpy #$11
   beq :+                   ;if set to value loaded for unbreakable, branch
+    lda OldR5
+    sta R5
+    jsr InitBrick
     jsr BrickShatter         ;execute code for breakable brick
     jmp InvOBit              ;skip subroutine to do last part of   code here
 :   
   jsr BumpBlock            ;execute code for unbreakable brick or question block
 InvOBit:
-  lda SprDataOffset_Ctrl   ;invert control bit used by block objects
-  eor #$01                 ;and floatey numbers
-  sta SprDataOffset_Ctrl
+  lda BrickOffset   ;invert control bit used by block objects
+  clc
+  adc #$01
+  cmp #BRICKS_SLOTS
+  bcc :+
+    lda #$00
+:
+  sta BrickOffset
   rts                      ;leave!
 
 
