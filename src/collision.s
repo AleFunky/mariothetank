@@ -1427,13 +1427,13 @@ CoinSd:
   rts
 
 GetMTileAttrib:
-  tay            ;save metatile value into Y
+  pha            ;save metatile value into stack
   and #%11000000 ;mask out all but 2 MSB
   asl
   rol            ;shift and rotate d7-d6 to d1-d0
   rol
   tax            ;use as offset for metatile data
-  tya            ;get original metatile value back
+  pla            ;get original metatile value back
 ExSCH2:
   rts            ;leave
 
