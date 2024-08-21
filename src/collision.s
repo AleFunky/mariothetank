@@ -941,6 +941,7 @@ SetDBSte: sta Enemy_State,x          ;set defeated enemy state
           sta Square2SoundQueue      ;load bowser defeat sound
           ldx R1                     ;get enemy offset
           lda #$09                   ;award 5000 points to player for defeating bowser
+          pha
           bne EnemySmackScore        ;unconditional branch to award points
 
 ChkOtherEnemies:
