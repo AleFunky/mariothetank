@@ -6,15 +6,6 @@
 
 .include "memory_p.inc"
 
-.pushseg
-.segment "SHORTRAM"
-RESERVE ReloadCHRBank, 1
-RESERVE CurrentCHRBank, 6
-AreaChrBank := CurrentCHRBank
-PlayerChrBank := CurrentCHRBank + 2
-EnemyChrBank := CurrentCHRBank + 4
-.popseg
-
 ; MMC3 registers / banking
 PRG_FIXED_8 = (1 << 6)
 BANK_SELECT = $8000

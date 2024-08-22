@@ -195,12 +195,17 @@ RESERVE SwitchToMainIRQ, 1
 RESERVE IrqPointerJmp, 3
 IrqPointer := IrqPointerJmp + 1
 
-RESERVE CurrentBank, 1
 RESERVE ReloadCHRBank, 1
-RESERVE CurrentCHRBank, 12
-AreaChrBank := CurrentCHRBank + 8
-PlayerChrBank := CurrentCHRBank + 0
-EnemyChrBank := CurrentCHRBank + 2
+RESERVE CurrentCHRBank, 6
+AreaChrBank := CurrentCHRBank
+PlayerChrBank := CurrentCHRBank + 2
+EnemyChrBank := CurrentCHRBank + 4
+
+RESERVE CurrentBank, 1
+RESERVE BankShadow, 1
+RESERVE TargetAddrJmp, 1
+RESERVE TargetAddress, 2
+RESERVE TargetAddrDummy, 1
 
 
 
@@ -625,7 +630,7 @@ RESERVE WarmBootValidation, 1
 
 .segment "SRAM"
 
-BRICKS_SLOTS = 8
+BRICKS_SLOTS = 4
 
 RESERVE BrickOffset, 1
 RESERVE Brick_State, BRICKS_SLOTS

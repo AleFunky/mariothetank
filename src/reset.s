@@ -42,13 +42,13 @@
     sta IrqNewScroll
 
     ; stall for 39 cpu cycles
-    ; lda #$4a ;hides 'LSR A'
-    ; bne *-1
+    lda #$4a ;hides 'LSR A'
+    bne *-1
     ; stall for 14 CPU cycles
-    php
-    plp
-    php
-    plp
+    ;php
+    ;plp
+    ;php
+    ;plp
 
     ; ((Y & $F8) << 2) | (X >> 3) in A for $2006 later.
     txa
@@ -111,9 +111,8 @@ ColdBoot:
     inx
     inx
     bne :-
-
-  ; do mapper specific init
-  jsr MapperInit
+    ; do mapper specific init
+    jsr MapperInit
 FinializeMarioInit:
   cli
   lda #$a5                     ;set warm boot flag
@@ -133,6 +132,9 @@ FinializeMarioInit:
   ; do a jsr to the main loop so we can profile it separately
   jsr IdleLoop
 .endproc
+.export BankInitValues
+BankInitValues:
+  .byte CHR_BG_GROUND, CHR_BG_GROUND+2, CHR_SMALLMARIO, CHR_MISC, CHR_SPR_GROUND, CHR_SPR_GROUND+1
 
 .proc IdleLoop
   lda NmiDisable
@@ -192,14 +194,12 @@ GoToNextFrameImmediately:
     pha
       BankPRGA #.bank(MUSIC)
       jsr SoundEngine
-    ;   lda #7 | PRG_FIXED_8
-    ;   sta BANK_SELECT
-    ; pla
-    ; sta BANK_DATA
-    ; lda BankShadow
-    ; sta BANK_SELECT
+      lda #7 | PRG_FIXED_8
+      sta BANK_SELECT
     pla
-    BankPRGA a
+    sta BANK_DATA
+    lda BankShadow
+    sta BANK_SELECT
 
     ply
     plx
@@ -239,19 +239,15 @@ ScreenOff:
   jsr OAMandReadJoypad
   lda ReloadCHRBank
   beq :+
-    .repeat 12, I
-      lda CurrentCHRBank + I
-      sta MMC5_CHR_BANK_BASE + I
-    .endrepeat
-  ;   ldx #PRG_FIXED_8
-  ; .repeat 6, I
-  ;   stx BANK_SELECT
-  ;   lda CurrentCHRBank + I
-  ;   sta BANK_DATA
-  ; .if I <> 5
-  ;   inx
-  ; .endif
-  ; .endrepeat
+    ldx #PRG_FIXED_8
+  .repeat 6, I
+    stx BANK_SELECT
+    lda CurrentCHRBank + I
+    sta BANK_DATA
+  .if I <> 5
+    inx
+  .endif
+  .endrepeat
     ldx #0
     stx ReloadCHRBank
   :
@@ -295,18 +291,14 @@ SkipSprite0:
   sta PPUCTRL
 
   ; play sound
-  ; lda CurrentBank
-  ; pha
-  ;   BankPRGA #.bank(MUSIC)
-  ;   jsr SoundEngine
-  ;   lda #7 | PRG_FIXED_8
-  ;   sta BANK_SELECT
-  ; pla
-  ; sta BANK_DATA
-
-  BankPRGA #.bank(MUSIC)
-  jsr SoundEngine
-  BankPRGA CurrentBank
+  lda CurrentBank
+  pha
+    BankPRGA #.bank(MUSIC)
+    jsr SoundEngine
+    lda #7 | PRG_FIXED_8
+    sta BANK_SELECT
+  pla
+  sta BANK_DATA
   
 .ifdef WORLD_HAX
 	dec DebugCooldown
@@ -372,8 +364,8 @@ RotPRandomBit:
     bne RotPRandomBit
 SkipMainOper:
 
-  ; lda BankShadow
-  ; sta BANK_SELECT
+  lda BankShadow
+  sta BANK_SELECT
   ply
   plx
   pla
