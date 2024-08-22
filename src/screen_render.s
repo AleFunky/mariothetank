@@ -913,7 +913,7 @@ StatusBarOffset:
 .export PrintStatusBarNumbers
 .proc PrintStatusBarNumbers
   ldx VRAM_Buffer1_Offset
-  cpx #$20
+  cpx #$14
   bcs ExitOutputN
   sta R0             ;store player-specific offset
   jsr OutputNumbers  ;use first nybble to print the coin display

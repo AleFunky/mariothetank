@@ -183,13 +183,18 @@ GoToNextFrameImmediately:
     inc NmiSkipped
     ; lag frame, prevent the graphics from going bunk by still running
     ; the irq. also run audio to keep it sounding like we didn't lag
-    SetScanlineIRQ #$1f
-    lda Mirror_PPUCTRL
-    and #%11111110            ;alter name table address to be $2800
-    sta PPUCTRL              ;(essentially $2000) but save other bits
-    lda #0
-    sta PPUSCROLL
-    sta PPUSCROLL
+    
+    ; Unless the screen is off, then we don't care
+    lda DisableScreenFlag
+    bne :+
+      SetScanlineIRQ #$1f
+      lda Mirror_PPUCTRL
+      and #%11111110            ;alter name table address to be $2800
+      sta PPUCTRL              ;(essentially $2000) but save other bits
+      lda #0
+      sta PPUSCROLL
+      sta PPUSCROLL
+    :
     lda CurrentBank
     pha
       BankPRGA #.bank(MUSIC)
