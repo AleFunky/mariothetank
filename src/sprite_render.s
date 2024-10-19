@@ -479,6 +479,8 @@ ProcessJumpingParatrooperInner:
 .proc ProcessBuzzyBeetle
   ldy #METASPRITE_BUZZY_BEETLE_WALKING_1
   lda Enemy_State,x
+  cmp #$03 ; enemy stomped upside down
+  beq WriteMetasprite
   cmp #$02
   bcc CheckRightSideUpShell
     ldy #METASPRITE_BUZZY_BEETLE_SHELL

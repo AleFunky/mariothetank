@@ -97,6 +97,8 @@ WBootCheck:
   ldy #WarmBootOffset          ;if passed both, load warm boot pointer
 ColdBoot:
   jsr InitializeMemory         ;clear memory using pointer in Y
+  lda #$00
+  sta RAM_PROTECT
   jsr InitializeSram
   sta SND_DELTA_REG+1          ;reset delta counter load register
   sta OperMode                 ;reset primary mode of operation
