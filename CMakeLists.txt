@@ -82,6 +82,8 @@ add_executable(${PROJECT_NAME}
   src/tiles/question_block.s
   src/tiles/staircase.s
 
+  src/practise/title.s
+
   src/nes.cfg
 )
 

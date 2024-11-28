@@ -33,7 +33,7 @@
 .export GetEnemyBoundBox, BoundingBoxCore, GetMiscBoundBox, LargePlatformBoundBox
 .export MoveJumpingEnemy, SmallPlatformBoundBox
 
-.segment "COLLISION"
+.segment "PRACTISE"
 
 ;-------------------------------------------------------------------------------------
 ;$06 - second object's offset

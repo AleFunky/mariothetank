@@ -26,6 +26,15 @@ MapperInit:
   lda #7 | PRG_FIXED_8
   sta BankShadow
 
+  
+  ; Now set the initial C bank
+  BankPRGC #5
+  lda #0
+  sta CurrentBank
+  sta NmiSkipped
+  lda #7 | PRG_FIXED_8
+  sta BankShadow
+
   ; disable scanline counter, and IRQ
   lda #0
   sta NMT_MIRROR

@@ -34,7 +34,7 @@ xsize           = charsperline
 
 PPU_CTRL1       = $2000
 PPU_CTRL2       = $2001
-PPU_STATUS      = $2002
+PPUSTATUS      = $2002
 PPU_SPR_ADDR    = $2003
 PPU_SPR_IO      = $2004
 PPU_VRAM_ADDR1  = $2005

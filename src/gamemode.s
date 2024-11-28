@@ -67,6 +67,8 @@ ClearVRLoop: sta VRAM_Buffer1-1,y      ;clear buffer at $0300-$03ff
   jsr GetAreaMusic          ;load proper music into queue
   inc Sprite0HitDetectFlag  ;set sprite #0 check flag
   inc OperMode_Task         ;increment to next task
+.import PractiseEnterStage
+  jsr PractiseEnterStage
   rts
 
 ;-------------------------------------------------------------------------------------

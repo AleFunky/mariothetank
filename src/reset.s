@@ -83,6 +83,8 @@
   bpl :-
 : lda PPUSTATUS
   bpl :-
+.export HotReset2
+HotReset2:
   ldy #ColdBootOffset          ;load default cold boot pointer
   ldx #$05                     ;this is where we check for a warm boot
 WBootCheck:
@@ -120,6 +122,9 @@ FinializeMarioInit:
   lda #$a5                     ;set warm boot flag
   sta WarmBootValidation     
   sta PseudoRandomBitReg       ;set seed for pseudorandom register
+  jsr MenuReset
+.export GL_ENTER
+GL_ENTER:
   lda #%00001111
   sta SND_MASTERCTRL_REG       ;enable all sound channels except dmc
   lda #%00000110
@@ -329,6 +334,8 @@ SkipSprite0:
 
   jsr PauseRoutine          ;handle pause
   jsr UpdateTopScore
+.import PractiseNMI, MenuNMI
+  jsr PractiseNMI        
   lda GamePauseStatus       ;check for pause status
   lsr
   bcs PauseSkip
@@ -604,7 +611,6 @@ ClrPauseTimer: lda GamePauseStatus    ;clear timer flag if timer is at zero and 
 SetPause:      sta GamePauseStatus
 ExitPause:     rts
 .endproc
-
 
 ;;;;;;;;----------------------------------------
 .segment "OAMALIGNED"

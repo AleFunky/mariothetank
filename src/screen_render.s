@@ -17,6 +17,8 @@
 
 ;-------------------------------------------------------------------------------------
 
+.import PractiseWriteTopStatusLine
+.import PractiseWriteBottomStatusLine
 .proc ScreenRoutines
 
   lda ScreenRoutineTask        ;run one of the following subroutines
@@ -24,8 +26,11 @@
 
   .word InitScreen
   .word SetupIntermediate
-  .word WriteTopStatusLine
-  .word WriteBottomStatusLine
+  
+  .word PractiseWriteTopStatusLine
+  .word PractiseWriteBottomStatusLine
+  ;.word WriteTopStatusLine
+  ;.word WriteBottomStatusLine
   .word DisplayTimeUp
   .word ResetSpritesAndScreenTimer
   .word DisplayIntermediate
@@ -871,8 +876,9 @@ AddToScore:
 GetSBNybbles:
   ldy CurrentPlayer      ;get current player
   lda StatusBarNybbles,y ;get nybbles based on player, use to update score and coins
-
+.import RedrawLowFreqStatusbar
 UpdateNumber:
+  jmp RedrawLowFreqStatusbar
   jsr PrintStatusBarNumbers ;print status bar numbers based on nybbles, whatever they be
   ldy VRAM_Buffer1_Offset   
   lda VRAM_Buffer1-6,y      ;check highest digit of score
